@@ -121,12 +121,16 @@ function isDuplicateMessage(messageId) {
   const now = Date.now();
   pruneProcessedMessageIds(now);
 
-  if (processedMessageIds.has(messageId)) {
-    return true;
+  return processedMessageIds.has(messageId);
+}
+
+function markMessageProcessed(messageId) {
+  if (!messageId) {
+    return;
   }
 
-  processedMessageIds.set(messageId, now);
-  return false;
+  pruneProcessedMessageIds(Date.now());
+  processedMessageIds.set(messageId, Date.now());
 }
 
 function getMessageInput(message) {
@@ -208,6 +212,7 @@ app.post("/webhook", async (req, res) => {
             body: "Namaste from Buddha Ayurveda. Please send a text message or choose a menu option to continue."
           }
         );
+        markMessageProcessed(message.id);
         console.log(`Sent non-text fallback to ${message.from}`);
       } catch (error) {
         const apiError = error.response?.data || error.message;
@@ -220,6 +225,7 @@ app.post("/webhook", async (req, res) => {
 
     try {
       await sendWhatsAppMessage(message.from, reply);
+      markMessageProcessed(message.id);
       console.log(`Replied to ${message.from}`);
     } catch (error) {
       const apiError = error.response?.data || error.message;
