@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: webhook-chatbot
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: PHONE_NUMBER_ID
+        sync: false
+      - key: GRAPH_API_VERSION
+        value: v22.0
+      - key: APP_SECRET
+        sync: false
