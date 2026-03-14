@@ -1,4 +1,4 @@
-const { blogPosts, contactInfo, products, siteLinks } = require("./catalog");
+const { contactInfo, products, siteLinks } = require("./catalog");
 
 const MAIN_MENU_ROWS = [
   {
@@ -152,8 +152,7 @@ function buildContactReply() {
 function buildBlogReply() {
   return buildTextResponse([
     "Read wellness articles and updates here:",
-    siteLinks.blog,
-    ...blogPosts
+    siteLinks.blog
   ].join("\n"));
 }
 
