@@ -187,6 +187,17 @@ function findMatchingProducts(normalizedText) {
 }
 
 function normalizeSelectionId(value) {
+  const rawValue = (value || "").toString().trim().toLowerCase();
+  const rawAsMenuKey = rawValue.replace(/\s+/g, "_");
+
+  if (rawAsMenuKey === "menu_products"
+    || rawAsMenuKey === "menu_featured"
+    || rawAsMenuKey === "menu_contact"
+    || rawAsMenuKey === "menu_blog"
+    || rawAsMenuKey === "menu_product_name") {
+    return rawAsMenuKey;
+  }
+
   const normalizedText = normalizeText(value);
 
   if (normalizedText.includes("all products") || normalizedText.includes("product links")) {
