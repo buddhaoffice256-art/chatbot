@@ -16,11 +16,7 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const GRAPH_API_VERSION = process.env.GRAPH_API_VERSION || "v22.0";
 const APP_SECRET = process.env.APP_SECRET;
 const PROCESSED_MESSAGE_TTL_MS = 15 * 60 * 1000;
-const RECENT_INPUT_TTL_MS = 30 * 1000;
-const GREETING_COOLDOWN_MS = 60 * 1000;
 const processedMessageIds = new Map();
-const recentSenderInputs = new Map();
-const recentGreetingBySender = new Map();
 
 app.use(express.json({
   verify: (req, _res, buffer) => {
@@ -133,69 +129,6 @@ function isDuplicateMessage(messageId) {
   return false;
 }
 
-function pruneRecentSenderInputs(now) {
-  for (const [key, timestamp] of recentSenderInputs.entries()) {
-    if (now - timestamp > RECENT_INPUT_TTL_MS) {
-      recentSenderInputs.delete(key);
-    }
-  }
-}
-
-function buildRecentSenderInputKey(from, input) {
-  return `${from}:${input.trim().toLowerCase()}`;
-}
-
-function hasRecentSenderInput(from, input) {
-  if (!from || !input) {
-    return false;
-  }
-
-  const now = Date.now();
-  const key = buildRecentSenderInputKey(from, input);
-
-  pruneRecentSenderInputs(now);
-
-  return recentSenderInputs.has(key);
-}
-
-function rememberRecentSenderInput(from, input) {
-  if (!from || !input) {
-    return;
-  }
-
-  pruneRecentSenderInputs(Date.now());
-  recentSenderInputs.set(buildRecentSenderInputKey(from, input), Date.now());
-}
-
-function pruneRecentGreetings(now) {
-  for (const [from, timestamp] of recentGreetingBySender.entries()) {
-    if (now - timestamp > GREETING_COOLDOWN_MS) {
-      recentGreetingBySender.delete(from);
-    }
-  }
-}
-
-function shouldSkipGreeting(from) {
-  if (!from) {
-    return false;
-  }
-
-  const now = Date.now();
-  pruneRecentGreetings(now);
-  const lastSent = recentGreetingBySender.get(from);
-
-  return Boolean(lastSent && now - lastSent <= GREETING_COOLDOWN_MS);
-}
-
-function rememberGreeting(from) {
-  if (!from) {
-    return;
-  }
-
-  pruneRecentGreetings(Date.now());
-  recentGreetingBySender.set(from, Date.now());
-}
-
 function getMessageInput(message) {
   if (message.type === "text") {
     return message.text?.body || "";
@@ -283,24 +216,10 @@ app.post("/webhook", async (req, res) => {
       continue;
     }
 
-    if (hasRecentSenderInput(message.from, incomingInput)) {
-      console.log(`Skipping duplicate sender input from ${message.from}: ${incomingInput}`);
-      continue;
-    }
-
     const reply = buildReply(incomingInput);
-
-    if (reply.intent === "greeting" && shouldSkipGreeting(message.from)) {
-      console.log(`Skipping repeat greeting for ${message.from}`);
-      continue;
-    }
 
     try {
       await sendWhatsAppMessage(message.from, reply);
-      rememberRecentSenderInput(message.from, incomingInput);
-      if (reply.intent === "greeting") {
-        rememberGreeting(message.from);
-      }
       console.log(`Replied to ${message.from}`);
     } catch (error) {
       const apiError = error.response?.data || error.message;
